@@ -256,7 +256,7 @@ local function camelToUnderline(str)
 	return string.upper(underString)
 end
 
-local function parseNewMatTexUnits(pbrModel, pbrMap)
+local function parseNewMatTexUnits(modelNiceName, pbrModel, pbrMap)
 	local boundTexUnits = {}
 	local texUnitDefs = pbrMaterialValues["texUnits"](pbrModel, pbrMap)
 
@@ -270,6 +270,8 @@ local function parseNewMatTexUnits(pbrModel, pbrMap)
 		local newFilePath = "unittextures/" .. fileName
 		if VFS.FileExists(newFilePath) then
 			boundTexUnits[tu] = texOpt .. newFilePath --keep :{opts}:
+		else
+			Spring.Echo(string.format("10_pbr.lua: Failed to load PBR texture (%s) for unit (%s)", newFilePath, modelNiceName))
 		end
 	end
 
@@ -286,7 +288,7 @@ local function parseNewMatTexUnits(pbrModel, pbrMap)
 	return boundTexUnits
 end
 
-local function parsePbrMatParams(pbrModel, pbrMap)
+local function parsePbrMatParams(modelNiceName, pbrModel, pbrMap)
 
 	local shaderDefinitions = {
 		"#version 150 compatibility",
@@ -392,6 +394,8 @@ local function parsePbrMatParams(pbrModel, pbrMap)
 					local newFilePath = "unittextures/" .. fileName
 					if VFS.FileExists(newFilePath) then
 						table.insert(define, "#define HAS_" .. tu)
+					else
+						Spring.Echo(string.format("10_pbr.lua: Failed to load PBR texture (%s) for unit (%s)", newFilePath, modelNiceName))
 					end
 				end
 			elseif valType == "number" then
@@ -447,8 +451,8 @@ local function parsePbrMatParams(pbrModel, pbrMap)
 end
 
 -- Take only non-uniform parameters
-local function getPbrMaterialIndex(pbrModel, pbrMap)
-	local shaderDefinitions, deferredDefinitions = parsePbrMatParams(pbrModel, pbrMap)
+local function getPbrMaterialIndex(modelNiceName, pbrModel, pbrMap)
+	local shaderDefinitions, deferredDefinitions = parsePbrMatParams(modelNiceName, pbrModel, pbrMap)
 
 	local propString = ""
 	propString = propString .. "\nshaderDefinitions:\n"
@@ -463,8 +467,8 @@ local function getPbrMaterialIndex(pbrModel, pbrMap)
 	return hashValue
 end
 
-local function createNewMatDef(pbrModel, pbrMap)
-	local shaderDefinitions, deferredDefinitions, customStandardUniforms, customDefferedUniforms = parsePbrMatParams(pbrModel, pbrMap)
+local function createNewMatDef(modelNiceName, pbrModel, pbrMap)
+	local shaderDefinitions, deferredDefinitions, customStandardUniforms, customDefferedUniforms = parsePbrMatParams(modelNiceName, pbrModel, pbrMap)
 	--Spring.Utilities.TableEcho(shaderDefinitions, "shaderDefinitions")
 	--Spring.Utilities.TableEcho(customStandardUniforms, "customStandardUniforms")
 
@@ -503,24 +507,27 @@ end
 
 for i = 1, #UnitDefs do
 	local udef = UnitDefs[i]
+	local modelNiceName = string.format("%s(%s)", udef.humanName, udef.name)
 	local modelFilename = string.format("Objects3d/%s.lua", udef.modelname)
 	if VFS.FileExists(modelFilename) then
 		local model = VFS.Include(modelFilename)
 		if model and model.pbr then
 			local pbrModel, pbrMap = sanitizePbrInputs(model.pbr, pbrMapRaw)
-			local pbrIndex = getPbrMaterialIndex(pbrModel, pbrMap)
+			local pbrIndex = getPbrMaterialIndex(modelNiceName, pbrModel, pbrMap)
 			local pbrMatName = "pbr_" .. tostring(pbrIndex)
 			if not materials[pbrMatName] then
-				local pbrMatDef = createNewMatDef(pbrModel, pbrMap)
+				local pbrMatDef = createNewMatDef(modelNiceName, pbrModel, pbrMap)
 				materials[pbrMatName] = pbrMatDef
 			end
-			local boundTexUnits = parseNewMatTexUnits(pbrModel, pbrMap)
+			local boundTexUnits = parseNewMatTexUnits(modelNiceName, pbrModel, pbrMap)
 			local matDef = {pbrMatName}
 			for tkey, tval in pairs(boundTexUnits) do
 				matDef[tkey] = tval
 			end
 			unitMaterials[i] = matDef
 		end
+	else
+		Spring.Echo(string.format("10_pbr.lua: Failed to load model definition file (%s) for unit (%s)", modelFilename, modelNiceName))
 	end
 end
 

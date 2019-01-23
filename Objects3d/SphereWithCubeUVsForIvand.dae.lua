@@ -48,7 +48,7 @@ model = {
 			gammaCorrection = false, -- do sRGB to RGB in-shader translation. Defaults to false, as ao should be saved in linear RGB.
 		},
 		roughnessMap = {
-			scale = 0.5, --acts as a multiplier or a base value (if get is nil)
+			scale = 0.0, --acts as a multiplier or a base value (if get is nil)
 			--get = "[3].g",
 			gammaCorrection = false, -- do sRGB to RGB in-shader translation. Defaults to false, as roughness should be saved in linear RGB.
 		},

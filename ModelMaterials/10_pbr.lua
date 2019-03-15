@@ -9,33 +9,10 @@ local mapInfo = VFS.FileExists(MAPSIDE_MAPINFO) and VFS.Include(MAPSIDE_MAPINFO)
 local pbrMapRaw = (mapInfo.custom or {}).pbr
 
 -----------===================================-------------
-local genBrdfLutClass = VFS.Include("ModelMaterials/Shaders/genBrdfLut.lua")
-local BRDFLUT_TEXDIM = 512 --512 is BRDF LUT texture size
-local genBrdfLut = genBrdfLutClass(BRDFLUT_TEXDIM)
-
-genBrdfLut:Initialize()
-local brdflutTex = genBrdfLut:GetTexture()
-local brdflutTexInitialized = false
-
-genBrdfLut.scream = Script.CreateScream()
-genBrdfLut.scream.func = function()
-	genBrdfLut:Finalize()
-	brdflutTex = nil
-end
 -----------===================================-------------
 
 local function DrawUnit(unitID, material, drawMode)
 	if drawMode == normalDraw and material.customStandardUniforms then
-		if brdflutTex and (not brdflutTexInitialized) then
-			-- Terrible workaround to missing DrawGenesis callin.
-			gl.PushPopMatrix(function()
-				gl.MatrixMode(GL.PROJECTION); gl.LoadIdentity();
-				gl.MatrixMode(GL.MODELVIEW); gl.LoadIdentity();
-				Spring.Echo("~brdflutTexInitialized")
-				genBrdfLut:Execute(false)
-				brdflutTexInitialized = true
-			end)
-		end
 		gl.BlendFuncSeparate(GL.SRC_ALPHA, GL.ONE_MINUS_SRC_ALPHA, GL.ZERO, GL.ZERO)
 		local curShader = material.standardShader
 		for _, uniformData in pairs(material.customStandardUniforms) do
@@ -51,9 +28,15 @@ local function DrawUnit(unitID, material, drawMode)
 				Spring.Echo(string.format("10_pbr.lua: Wrong shader uniform type (%s) for uniform (%s)", valType, uniformData.name))
 			end
 		end
+		-- TODO: check if this is reqired(it should not be)
 		local gf = Spring.GetGameFrame()
 		gl.UniformInt(gl.GetUniformLocation(curShader, "simFrame"), gf)
 	end
+end
+
+local function SunChanged(curShader)
+	gl.Uniform(gl.GetUniformLocation(curShader, "shadowDensity"), gl.GetSun("shadowDensity" ,"unit"))
+	gl.Uniform(gl.GetUniformLocation(curShader, "sunColor"), gl.GetSun("diffuse" ,"unit"))
 end
 
 local function adler32(str)
@@ -488,13 +471,14 @@ local function createNewMatDef(modelNiceName, pbrModel, pbrMap)
 			[2] = "%TEX2",
 			[3] = "%TEX3",
 			--[4] = "%TEX4",
-			[5] = brdflutTex or "unittextures/brdflutTex.png",
+			[5] = GG.GetBrdfTexture() or "unittextures/brdflutTex.png",
 			--[5] = "unittextures/brdflutTex.png",
 			[6] = "$shadow",
 			[7] = "%IRRADIANCEMAP", --TODO replace with radiance map!!!
 			[8] = "%SPECULARMAP",
 		},
 		DrawUnit = DrawUnit,
+		SunChanged = SunChanged,
 		--UnitCreated = UnitCreated,
 		--UnitDestroyed = UnitDestroyed,
 

@@ -7,19 +7,17 @@ uniform vec2 texSize;
 
 //https://www.shadertoy.com/view/4djSRW
 // Hash without Sine
-#define HASHSCALE1 .1031
+#define HASHSCALE1 443.8975
 
 //----------------------------------------------------------------------------------------
 //  1 out, 2 in...
-float hash12(vec2 p)
-{
+float hash12(vec2 p) {
 	vec3 p3  = fract(vec3(p.xyx) * HASHSCALE1);
     p3 += dot(p3, p3.yzx + 19.19);
     return fract((p3.x + p3.y) * p3.z);
 }
 
-vec2 hammersley2d(uint i, uint N)
-{
+vec2 hammersley2d(uint i, uint N) {
 	// Radical inverse based on http://holger.dammertz.org/stuff/notes_HammersleyOnHemisphere.html
 	uint bits = (i << 16u) | (i >> 16u);
 	bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
@@ -33,8 +31,7 @@ vec2 hammersley2d(uint i, uint N)
 #define RESTRICT_BRANCHING
 
 // Based on http://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_slides.pdf
-vec3 importanceSample_GGX(vec2 Xi, float roughness, vec3 normal)
-{
+vec3 importanceSample_GGX(vec2 Xi, float roughness, vec3 normal) {
 	// Maps a 2D point to a hemisphere with spread based on roughness
 	float alpha = roughness * roughness;
 	float phi = 2.0 * M_PI * Xi.x + hash12(normal.xz) * 0.1;
@@ -55,11 +52,10 @@ vec3 importanceSample_GGX(vec2 Xi, float roughness, vec3 normal)
 	return normalize(tangentX * H.x + tangentY * H.y + normal * H.z);
 }
 
-#define G_OPTION 3
+#define G_OPTION ###G_OPTION###
 
 // Geometric Shadowing function
-float G_SchlicksmithGGX(float dotNL, float dotNV, float roughness)
-{
+float G_SchlicksmithGGX(float dotNL, float dotNV, float roughness) {
 	#if (G_OPTION == 1)
 		float k = (roughness * roughness) / 2.0;
 	#elif (G_OPTION == 2)
@@ -77,8 +73,7 @@ float G_SchlicksmithGGX(float dotNL, float dotNV, float roughness)
 	return GL * GV;
 }
 
-vec2 BRDF(float NoV, float roughness)
-{
+vec2 BRDF(float NoV, float roughness) {
 	// Normal always points along z-axis for the 2D lookup
 	const vec3 N = vec3(0.0, 0.0, 1.0);
 	vec3 V = vec3(sqrt(1.0 - NoV * NoV), 0.0, NoV); //normalized
@@ -116,5 +111,4 @@ void main() {
 	//NdotV, roughness
 	vec2 inUV = gl_FragCoord.xy / texSize;
 	gl_FragColor = vec4(BRDF(inUV.x, 1.0 - inUV.y), 0.0, 1.0);
-	//gl_FragColor = pow(gl_FragColor, vec4(2.2));
 }

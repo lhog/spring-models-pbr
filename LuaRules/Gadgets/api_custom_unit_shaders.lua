@@ -57,6 +57,8 @@ local shadows = false
 local advShading = false
 local normalmapping = false
 
+local sunChanged = false
+
 local unitRendering = {
   drawList        = {},
   materialInfos   = {},
@@ -419,6 +421,11 @@ function gadget:Update()
   end
 end
 
+
+function gadget:SunChanged()
+	sunChanged = true
+end
+
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 
@@ -476,6 +483,46 @@ local function ObjectDestroyed(rendering, objectID, objectDefID)
     end
     rendering.drawList[objectID] = nil
   end
+end
+
+function gadget:DrawGenesis()
+	if sunChanged then
+		for _, mat in pairs(unitRendering.materialDefs) do
+			local SunChangedFunc = mat.SunChanged
+
+			if mat.standardShader and SunChangedFunc then
+				gl.ActiveShader(mat.standardShader, function()
+					SunChangedFunc(mat.standardShader)
+				end)
+			end
+
+			if mat.deferredShader and SunChangedFunc then
+				gl.ActiveShader(mat.deferredShader, function()
+					SunChangedFunc(mat.deferredShader)
+				end)
+			end
+
+		end
+
+		for _, mat in pairs(featureRendering.materialDefs) do
+			local SunChangedFunc = mat.SunChanged
+
+			if mat.standardShader and SunChangedFunc then
+				gl.ActiveShader(mat.standardShader, function()
+					SunChangedFunc(mat.standardShader)
+				end)
+			end
+
+			if mat.deferredShader and SunChangedFunc then
+				gl.ActiveShader(mat.deferredShader, function()
+					SunChangedFunc(mat.deferredShader)
+				end)
+			end
+
+		end
+
+		sunChanged = false
+	end
 end
 
 function gadget:RenderUnitDestroyed(unitID, unitDefID)

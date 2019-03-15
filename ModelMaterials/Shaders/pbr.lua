@@ -15,8 +15,8 @@ return {
 		specularEnvTex = 8,
 	},
 	uniformFloat = {
-		sunColor = {1.0, 1.0, 1.0},
-		shadowDensity = {gl.GetSun("shadowDensity" ,"unit")},
+		sunColor = {gl.GetSun("diffuse" ,"unit")},
+		shadowDensity = gl.GetSun("shadowDensity" ,"unit"),
 	},
 	uniformMatrix = {
 	},
